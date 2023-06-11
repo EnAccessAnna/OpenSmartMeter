@@ -31,6 +31,7 @@ char selectKey;
 bool is_STSmode = false;  // by default on OpenPAYGO Token
 
 void urgeent() {
+
   if (true_power < 15) {
     true_power = 0;
   }
@@ -41,7 +42,8 @@ void urgeent() {
     credit_formular();
   }
 
-  STS_keypad();
+  STS_keypad();   //scan to see if a key is pressed.
+
   warn_now = millis();
   if (c_chek == 1) {
     if (warn_now - warntime > 1500) {
@@ -59,33 +61,37 @@ void urgeent() {
       digitalWrite(buzzer, LOW);
     }
   }
+
   if (parameters > 0) {
     parameters_display();
   }
+
   if ((sts_mode == 0) && (parameters == 0) && (btt > 2) && (tp_fetch == 0)) {
     lcd_update();
   }
 
-  btValue = analogRead(battery_input);
-  btt = btValue * 0.07331280915044247787610619469027;
-  if (btt < 2) {
-    fault = 1;
-    if (fault_written == 0) {
-      mem.writeLong(tamper_location, 03);
-      fault_written = 1;
-    }
-    lcd.setCursor(0, 0);
-    lcd.print("TERMINAL  COVER ");
-    lcd.setCursor(0, 1);
-    lcd.print("      OPEN      ");
-    digitalWrite(buzzer, HIGH);
-    delay(20);
-    digitalWrite(buzzer, LOW);
-  }
+  // btValue = analogRead(battery_input);
+  // btt = btValue * 0.07331280915044247787610619469027;
+  // if (btt < 2) {
+  //   fault = 1;
+  //   if (fault_written == 0) {
+  //     mem.writeLong(tamper_location, 03);
+  //     fault_written = 1;
+  //   }
+  //   lcd.setCursor(0, 0);
+  //   lcd.print("TERMINAL  COVER ");
+  //   lcd.setCursor(0, 1);
+  //   lcd.print("      OPEN      ");
+  //   digitalWrite(buzzer, HIGH);
+  //   delay(20);
+  //   digitalWrite(buzzer, LOW);
+  // }
+
   if (btt > 2) {
     fault = 0;
     fault_written = 0;
   }
+
   if (mains_input_value > 50) {
     if ((freq < low_freq) || (mains_input_value > over_voltage) ||
         (mains_input_value < low_voltage) || (true_power > over_load)) {
@@ -102,23 +108,27 @@ void urgeent() {
 void select_mode() {
   lcd.clear();
   lcd.setCursor(0, 0);
-  lcd.print("SELECT MODE:\n\n 0: PAYGO TOKEN MODE \n\n 1: STS MODE");
-  selectKey = customKeypad.getKey();
-  while ((selectKey = !'0') && (selectKey = !'1')) {
+  lcd.print("SELECT MODE: ");
+  lcd.setCursor(0, 1);
+  lcd.print("OPG(0)   STS(1)");
+
+  while ((selectKey != '0') && (selectKey != '1')) {    //Wait till a mode is selected
     selectKey = customKeypad.getKey();
-    delay(100);
   }
 
   lcd.clear();
   lcd.setCursor(0, 0);
   if (selectKey == '0') {
-    lcd.print("OpenPAYGO Mode");
+    lcd.print(" OpenPAYGO MODE ");
     is_STSmode = false;
   }
-
-  if (selectKey == '1') {
-    lcd.print("STS Mode");
+  else if (selectKey == '1') {
+    buss();
+    lcd.print("    STS MODE    ");
     is_STSmode = true;
   }
+  lcd.setCursor(0, 1);
+  lcd.print("   ACTIVATED!!  ");
   delay(2000);
+  lcd.clear();
 }

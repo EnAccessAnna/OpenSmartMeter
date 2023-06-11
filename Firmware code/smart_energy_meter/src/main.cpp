@@ -22,7 +22,6 @@
 #include "time_management.hpp"
 #include "token_management.hpp"
 
-// meter_const_config deviceConfig;
 HardwareSerial Serial2(PA3, PA2);
 
 byte fe1[8] = {0b00011, 0b00011, 0b00011, 0b00011,
@@ -47,49 +46,42 @@ void setup() {
 
   Serial2.begin(115200);
   Serial2.print("Device Powered! \n");
+  
+  //Display Intro Screen.
   digitalWrite(buzzer, HIGH);
-
-  Serial2.print("Setting up LCD... \n");
   lcd.createChar(0, fe1);
   lcd.createChar(1, fe2);
   lcd.createChar(2, fe3);
   lcd.createChar(3, fe4);
   lcd.setCursor(0, 0);
-  lcd.print("  DEVELOPED BY  ");
+  lcd.print("    FIRST      ");
   lcd.setCursor(0, 1);
-  lcd.print(" FIRST ELECTRIC ");
-  delay(2000);
-  
-  lcd.clear();
-  lcd.setCursor(7, 0);
+  lcd.print("    ELECTRIC CO.   ");
+  lcd.setCursor(1, 0);
   lcd.write(byte(0));
-  lcd.setCursor(8, 0);
+  lcd.setCursor(2, 0);
   lcd.write(byte(1));
-  lcd.setCursor(7, 1);
+  lcd.setCursor(1, 1);
   lcd.write(byte(2));
-  lcd.setCursor(8, 1);
+  lcd.setCursor(2, 1);
   lcd.write(byte(3));
-  Serial2.print("LCD Setup complete! \n");
-   
-  Serial2.print("Setting up AFE... \n");
-  ATM90E26.begin(9600);
-  AFE_chip.SET_register_values();
-  delay(1000);
-  Serial2.print("AFE Setup Complete! \n");
+  delay(2000);
+  lcd.clear();
   digitalWrite(buzzer, LOW);
 
-  Serial1.begin(115200);
-  delay(3000);
-  Serial1.write("AT+IPR=9600\r\n");
-  Serial1.end();
-  Serial1.begin(9600);
-
+  //Begin Device Initialization. 
   lcd.setCursor(0, 0);
   lcd.print(" SYSTEM BOOTING ");
   lcd.setCursor(0, 1);
   lcd.print(" #------------#");
 
+  //Configure GSM modem.
   Serial2.println("Initializing modem...");
+  Serial1.begin(115200);
+  delay(1500);
+  Serial1.write("AT+IPR=9600\r\n");
+  Serial1.end();
+  Serial1.begin(9600);
   modem.restart();
   String modemInfo = modem.getModemInfo();
   lcd.setCursor(0, 0);
@@ -106,6 +98,7 @@ void setup() {
   delay(2000);
   lcd.clear();
 
+  //Configure RTC
   while(rtc.begin() == false ) { 
     lcd.print("Couldn't find RTC"); 
     delay(2000);
@@ -116,6 +109,12 @@ void setup() {
     delay(2000);
   }
 
+  //Configure AFE.  
+  ATM90E26.begin(9600);
+  AFE_chip.SET_register_values();
+  delay(500);
+
+  //Get Meter AFE checksum
   lcd.setCursor(0, 0);
   lcd.print("CSOne :         ");
   lcd.setCursor(8, 0);
@@ -125,9 +124,9 @@ void setup() {
   lcd.print("CSTwo :         ");
   lcd.setCursor(8, 1);
   lcd.print(AFE_chip.FETCH_MeterCSTwo());
-  delay(1000);
+  delay(3000);
 
-  // rtc eeprom
+  // Configure EEPROM.
   // mem.writeLong(credit_eeprom_location, 200);
   //  mem.writeLong(eeprom_location_cnt, token_eeprom_location);
   //  delay(20);
@@ -139,17 +138,23 @@ void setup() {
   }
 
   /* Get device configuration parameters from eeprom */
+  // meter_const_config deviceConfig;     //Meter configuration struct.
+  //
   // deviceConfig =  mem.readLong(deviceConfig_location);
   // while(deviceConfig.status == NOT_SET_CONFIG)
   // {
   //   Serial2.println("Device configuration required...\n");
-  //   while()  //wait for command from serial 2
+  //   STEPS:
+  //    1. Start timer and wait for command from serial 2 containing the configuration parameters.
+  //    2. Verify Configuration parameters and save into struct "deviceConfig" 
+  //    3. Save struct into the EEPROM. 
   // }
 
   delay(10);
   relay_on();
   select_mode();
-  if (is_STSmode) {
+
+  if (is_STSmode == true) {
 #if defined(TIM1)
     TIM_TypeDef* Instance = TIM1;
 #else
@@ -162,24 +167,26 @@ void setup() {
   } else {
     printf("OpenPAYGO code written here");
   }
-Serial2.println("Setup Complete! \n");  
 }
 
 void loop() {
+
   if (is_STSmode) {
-    mesure();
-    if ((mains_input_value > 50)) {
+  /**RUN CODE FOR STS MODE**/
+    mesure();                         // Read AFE parameters. 
+    if ((mains_input_value > 50))
       credit_reminder();
-    }
     if ((mains_input_value < 50)) {
       digitalWrite(red_led, LOW);
       digitalWrite(green_led, LOW);
     }
-    get_time();
-    if ((sts_mode == 0) && (mains_input_value > 50)) {
+    get_time();                       //Update Date and Time.
+    if ((sts_mode == 0) && (mains_input_value > 50))
       gsm_func();
-    }
-  } else {
+      
+  } 
+  else {
+  /**RUN CODE FOR OpenPAYGO MODE**/
     printf("OpenPAYGO code written here");
   }
 }
