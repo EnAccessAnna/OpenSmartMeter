@@ -37,6 +37,10 @@ byte fe4[8] = {0b01111, 0b01100, 0b01100, 0b00000,
                0b00000, 0b00000, 0b00000, 0b00000};
 
 void setup() {
+  
+  Serial2.begin(115200);
+  Serial2.print("Device Powered! \n");
+  
   lcd.begin(16, 2);
   pinMode(buzzer, OUTPUT);
   pinMode(relaya, OUTPUT);
@@ -44,10 +48,7 @@ void setup() {
   pinMode(red_led, OUTPUT);
   pinMode(green_led, OUTPUT);
 
-  Serial2.begin(115200);
-  Serial2.print("Device Powered! \n");
-  
-  //Display Intro Screen.
+    //Display Intro Screen.
   digitalWrite(buzzer, HIGH);
   lcd.createChar(0, fe1);
   lcd.createChar(1, fe2);
@@ -92,7 +93,7 @@ void setup() {
   Serial2.print("Modem: ");
   Serial2.println(modemInfo);
   lcd.setCursor(0, 0);
-  lcd.print(" modemInfo ");
+  lcd.print("ModemID ");
   lcd.setCursor(0, 1);
   lcd.print(modemInfo);
   delay(2000);
@@ -101,12 +102,13 @@ void setup() {
   //Configure RTC
   while(rtc.begin() == false ) { 
     lcd.print("Couldn't find RTC"); 
-    delay(2000);
+    delay(500);
   } 
 
   if (!rtc.isrunning()) {
-    lcd.print("RTC is NOT running!");
-    delay(2000);
+    //If not running, enable and set Dat&time.
+    rtc.adjust(DateTime(2020,1,1,3,0,0));     //<YEAR>,<MTH>,<DAY>,<HR><MIN><SEC>
+    delay(500);
   }
 
   //Configure AFE.  
@@ -134,10 +136,10 @@ void setup() {
   //  delay(20);
   creditt = mem.readLong(credit_eeprom_location);
   if (creditt >= 0) {
-    mem.writeLong(credit_eeprom_location, creditt);
+    mem.writeLong(credit_eeprom_location, creditt);     //Not sure why this is needed. Should be removed.
   }
 
-  /* Get device configuration parameters from eeprom */
+  /* TODO: Get device configuration parameters from eeprom */
   // meter_const_config deviceConfig;     //Meter configuration struct.
   //
   // deviceConfig =  mem.readLong(deviceConfig_location);
@@ -170,7 +172,6 @@ void setup() {
 }
 
 void loop() {
-
   if (is_STSmode) {
   /**RUN CODE FOR STS MODE**/
     mesure();                         // Read AFE parameters. 
@@ -181,9 +182,9 @@ void loop() {
       digitalWrite(green_led, LOW);
     }
     get_time();                       //Update Date and Time.
+
     if ((sts_mode == 0) && (mains_input_value > 50))
-      gsm_func();
-      
+      gsm_func();    
   } 
   else {
   /**RUN CODE FOR OpenPAYGO MODE**/
